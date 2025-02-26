@@ -122,15 +122,39 @@
             top: 50%;
             right: 20px;
             transform: translateY(-50%);
-            text-align: right;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 16px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             color: white;
-            font-size: 1rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            animation: fadeIn 1s ease-in-out;
+            transition: all 0.3s ease;
+        }
+
+        /* Animation for fade-in */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .credits a {
-            color: blue; /* Link color */
+            color: #1e90ff; /* Blue link color */
             text-decoration: underline; /* Underline the link */
             font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .credits a:hover {
+            color: #ff1493; /* Change color on hover */
         }
     </style>
 </head>
