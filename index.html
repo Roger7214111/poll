@@ -27,6 +27,7 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            position: relative; /* For absolute positioning */
         }
 
         .container {
@@ -81,6 +82,8 @@
 
         #chartContainer {
             display: none;
+            margin-top: 20px;
+            text-align: center;
         }
 
         .counter {
@@ -112,6 +115,23 @@
             border-radius: 8px;
             cursor: pointer;
         }
+
+        /* Added styling for the "Made by Malik" text and link */
+        .credits {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            text-align: right;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .credits a {
+            color: blue; /* Link color */
+            text-decoration: underline; /* Underline the link */
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -129,6 +149,12 @@
             <div class="results-text" id="resultsText"></div>
             <button id="resetButton">Reset Votes</button>
         </div>
+    </div>
+
+    <!-- Credits Section -->
+    <div class="credits">
+        <p>Made by Malik</p>
+        <a href="https://www.google.com" target="_blank">Go to Google</a>
     </div>
 
     <script>
