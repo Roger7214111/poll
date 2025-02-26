@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Rating</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #a855f7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 640px;
+            transition: transform 0.3s ease;
+        }
+
+        h1 {
+            color: #1f2937;
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 2.4rem;
+            font-weight: 800;
+        }
+
+        .poll-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .vote-btn {
+            padding: 20px;
+            border: none;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            color: #1f2937;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .vote-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            background: var(--primary);
+            color: white;
+        }
+
+        #chartContainer {
+            display: none;
+        }
+
+        .counter {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #4b5563;
+            margin-top: 24px;
+        }
+
+        .results-text {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.1rem;
+            color: #1f2937;
+        }
+
+        .results-text span {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        #resetButton {
+            display: none;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>How Was My Presentation? 💫</h1>
+        <div class="poll-grid">
+            <button class="vote-btn" data-rating="very-good">Very Good 🌟</button>
+            <button class="vote-btn" data-rating="good">Good 👍</button>
+            <button class="vote-btn" data-rating="ok">OK 👌</button>
+            <button class="vote-btn" data-rating="meh">Meh 😐</button>
+        </div>
+        <div id="chartContainer">
+            <canvas id="resultsChart"></canvas>
+            <p class="counter">Votes: <span id="voteCount">0</span>/30</p>
+            <div class="results-text" id="resultsText"></div>
+            <button id="resetButton">Reset Votes</button>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration (Replace with your details)
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2OkI4mcE92TtGjf3bPyU6dnD3VDkActw",
+            authDomain: "presentation-poll-b4e9a.firebaseapp.com",
+            projectId: "presentation-poll-b4e9a",
+            storageBucket: "presentation-poll-b4e9a.firebasestorage.app",
+            messagingSenderId: "889078524731",
+            appId: "1:889078524731:web:957ec2807e8ec9b433e51e"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Initialize votes collection
+        const votesRef = db.collection("votes");
+
+        // Real-time listener for vote count
+        let totalVotes = 0;
+        votesRef.onSnapshot((snapshot) => {
+            totalVotes = snapshot.size;
+            document.getElementById("voteCount").textContent = totalVotes;
+            
+            if (totalVotes >= 30) {
+                showResults();
+                document.querySelector(".poll-grid").style.display = "none";
+            }
+        });
+
+        // Voting logic
+        document.querySelectorAll(".vote-btn").forEach(button => {
+            button.addEventListener("click", async () => {
+                // Add vote to Firestore
+                await votesRef.add({
+                    rating: button.dataset.rating,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Redirect to results page
+                window.location.href = "#results";
+                showResults();
+            });
+        });
+
+        // Results chart and text
+        let chartInstance = null;
+        async function showResults() {
+            const snapshot = await votesRef.get();
+            const votes = snapshot.docs.map(doc => doc.data().rating);
+            
+            const counts = {
+                "very-good": votes.filter(v => v === "very-good").length,
+                "good": votes.filter(v => v === "good").length,
+                "ok": votes.filter(v => v === "ok").length,
+                "meh": votes.filter(v => v === "meh").length
+            };
+
+            // Update results text
+            const resultsText = document.getElementById("resultsText");
+            resultsText.innerHTML = `
+                <p><span>Very Good 🌟:</span> ${counts["very-good"]} votes</p>
+                <p><span>Good 👍:</span> ${counts["good"]} votes</p>
+                <p><span>OK 👌:</span> ${counts["ok"]} votes</p>
+                <p><span>Meh 😐:</span> ${counts["meh"]} votes</p>
+            `;
+
+            // Chart.js graph
+            const ctx = document.getElementById("resultsChart").getContext("2d");
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: ["Very Good 🌟", "Good 👍", "OK 👌", "Meh 😐"],
+                    datasets: [{
+                        data: Object.values(counts),
+                        backgroundColor: ["#6366f1", "#a855f7", "#f472b6", "#94a3b8"],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: "bottom" },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
+
+            document.getElementById("chartContainer").style.display = "block";
+            document.getElementById("resetButton").style.display = "block";
+        }
+
+        // Reset button logic
+        const resetButton = document.getElementById("resetButton");
+        resetButton.addEventListener("click", async () => {
+            const password = prompt("Enter the password to reset votes:");
+            if (password === "Abdullah.135") {
+                const confirmReset = confirm("Are you sure you want to reset all votes? This cannot be undone.");
+                if (confirmReset) {
+                    // Delete all votes from Firestore
+                    const snapshot = await votesRef.get();
+                    snapshot.docs.forEach(async (doc) => {
+                        await votesRef.doc(doc.id).delete();
+                    });
+
+                    // Hide results and show voting buttons
+                    document.getElementById("chartContainer").style.display = "none";
+                    document.querySelector(".poll-grid").style.display = "grid";
+                    resetButton.style.display = "none";
+                }
+            } else {
+                alert("Incorrect password. Votes were not reset.");
+            }
+        });
+
+        // Show results if hash is present
+        if (window.location.hash === "#results") {
+            showResults();
+            document.querySelector(".poll-grid").style.display = "none";
+        }
+    </script>
+</body>
+</html>
